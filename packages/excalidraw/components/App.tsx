@@ -9432,10 +9432,64 @@ class App extends React.Component<AppProps, AppState> {
     }
   }
 
+  private removePointerDownEventListeners(
+    pointerDownState: PointerDownState,
+  ) {
+    window.removeEventListener(
+      EVENT.POINTER_MOVE,
+      pointerDownState.eventListeners.onMove!,
+    );
+    window.removeEventListener(
+      EVENT.POINTER_UP,
+      pointerDownState.eventListeners.onUp!,
+    );
+    window.removeEventListener(
+      EVENT.KEYDOWN,
+      pointerDownState.eventListeners.onKeyDown!,
+    );
+    window.removeEventListener(
+      EVENT.KEYUP,
+      pointerDownState.eventListeners.onKeyUp!,
+    );
+  }
+
   private onKeyDownFromPointerDownHandler(
     pointerDownState: PointerDownState,
   ): (event: KeyboardEvent) => void {
     return withBatchedUpdates((event: KeyboardEvent) => {
+      if (
+        event.key === KEYS.ESCAPE &&
+        this.state.newElement &&
+        this.state.multiElement === null
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        this.scene.mutateElement(this.state.newElement, { isDeleted: true });
+
+        this.removePointerDownEventListeners(pointerDownState);
+
+        if (!this.state.activeTool.locked) {
+          resetCursor(this.interactiveCanvas);
+          this.setState((prevState) => ({
+            newElement: null,
+            suggestedBinding: null,
+            snapLines: updateStable(prevState.snapLines, []),
+            activeTool: updateActiveTool(this.state, {
+              type: this.state.preferredSelectionTool.type,
+            }),
+          }));
+        } else {
+          this.setState((prevState) => ({
+            newElement: null,
+            suggestedBinding: null,
+            snapLines: updateStable(prevState.snapLines, []),
+          }));
+        }
+
+        return;
+      }
+
       if (this.maybeHandleResize(pointerDownState, event)) {
         return;
       }
@@ -10576,22 +10630,7 @@ class App extends React.Component<AppProps, AppState> {
 
       this.missingPointerEventCleanupEmitter.clear();
 
-      window.removeEventListener(
-        EVENT.POINTER_MOVE,
-        pointerDownState.eventListeners.onMove!,
-      );
-      window.removeEventListener(
-        EVENT.POINTER_UP,
-        pointerDownState.eventListeners.onUp!,
-      );
-      window.removeEventListener(
-        EVENT.KEYDOWN,
-        pointerDownState.eventListeners.onKeyDown!,
-      );
-      window.removeEventListener(
-        EVENT.KEYUP,
-        pointerDownState.eventListeners.onKeyUp!,
-      );
+      this.removePointerDownEventListeners(pointerDownState);
 
       this.props?.onPointerUp?.(activeTool, pointerDownState);
       this.onPointerUpEmitter.trigger(

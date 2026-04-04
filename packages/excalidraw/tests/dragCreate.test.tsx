@@ -9,6 +9,8 @@ import { Excalidraw } from "../index";
 import * as InteractiveScene from "../renderer/interactiveScene";
 import * as StaticScene from "../renderer/staticScene";
 
+import { Keyboard, UI } from "./helpers/ui";
+
 import {
   render,
   fireEvent,
@@ -355,6 +357,185 @@ describe("Test dragCreate", () => {
           isDeleted: true,
         }),
       ]);
+    });
+  });
+
+  describe("Escape cancels drag-create", () => {
+    it("rectangle", async () => {
+      const { getByToolName, container } = await render(<Excalidraw />);
+      const tool = getByToolName("rectangle");
+      fireEvent.click(tool);
+
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      fireEvent.pointerUp(canvas);
+
+      expect(h.elements.length).toEqual(0);
+      expect(h.state.newElement).toBeNull();
+      expect(h.state.activeTool.type).toBe("selection");
+    });
+
+    it("ellipse", async () => {
+      const { getByToolName, container } = await render(<Excalidraw />);
+      const tool = getByToolName("ellipse");
+      fireEvent.click(tool);
+
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      fireEvent.pointerUp(canvas);
+
+      expect(h.elements.length).toEqual(0);
+      expect(h.state.newElement).toBeNull();
+      expect(h.state.activeTool.type).toBe("selection");
+    });
+
+    it("diamond", async () => {
+      const { getByToolName, container } = await render(<Excalidraw />);
+      const tool = getByToolName("diamond");
+      fireEvent.click(tool);
+
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      fireEvent.pointerUp(canvas);
+
+      expect(h.elements.length).toEqual(0);
+      expect(h.state.newElement).toBeNull();
+      expect(h.state.activeTool.type).toBe("selection");
+    });
+
+    it("freedraw", async () => {
+      const { getByToolName, container } = await render(<Excalidraw />);
+      const tool = getByToolName("freedraw");
+      fireEvent.click(tool);
+
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      fireEvent.pointerUp(canvas);
+
+      expect(h.elements.length).toEqual(0);
+      expect(h.state.newElement).toBeNull();
+      expect(h.state.activeTool.type).toBe("selection");
+    });
+
+    it("single-segment arrow", async () => {
+      const { getByToolName, container } = await render(<Excalidraw />);
+      const tool = getByToolName("arrow");
+      fireEvent.click(tool);
+
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      fireEvent.pointerUp(canvas);
+
+      expect(h.elements.length).toEqual(0);
+      expect(h.state.newElement).toBeNull();
+      expect(h.state.activeTool.type).toBe("selection");
+    });
+
+    it("multi-point arrow Escape still finalizes (regression)", async () => {
+      const { getByToolName, container } = await render(
+        <Excalidraw handleKeyboardGlobally={true} />,
+      );
+      const tool = getByToolName("arrow");
+      fireEvent.click(tool);
+
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      // click to place first point
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerUp(canvas, { clientX: 30, clientY: 20 });
+
+      // click to place second point (enters multi-point mode)
+      fireEvent.pointerDown(canvas, { clientX: 60, clientY: 70 });
+      fireEvent.pointerUp(canvas, { clientX: 60, clientY: 70 });
+
+      // Escape should finalize, not cancel
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      const element = h.elements[0] as ExcalidrawLinearElement;
+      expect(element).toBeDefined();
+      expect(element.type).toBe("arrow");
+      expect(element.isDeleted).toBe(false);
+      expect(element.points.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("subsequent creation works after cancellation", async () => {
+      const { getByToolName, container } = await render(<Excalidraw />);
+
+      // First: start and cancel a rectangle
+      const rectTool = getByToolName("rectangle");
+      fireEvent.click(rectTool);
+
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      fireEvent.pointerUp(canvas);
+
+      expect(h.elements.length).toEqual(0);
+
+      // Second: create an ellipse normally
+      const ellipseTool = getByToolName("ellipse");
+      fireEvent.click(ellipseTool);
+
+      fireEvent.pointerDown(canvas, { clientX: 100, clientY: 100 });
+      fireEvent.pointerMove(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.pointerUp(canvas);
+
+      expect(h.elements.length).toEqual(1);
+      expect(h.elements[0].type).toBe("ellipse");
+      expect(h.elements[0].isDeleted).toBe(false);
+    });
+
+    it("locked tool remains active after cancellation", async () => {
+      await render(<Excalidraw />);
+
+      UI.clickTool("lock");
+      expect(h.state.activeTool.locked).toBe(true);
+
+      UI.clickTool("rectangle");
+      expect(h.state.activeTool.type).toBe("rectangle");
+
+      const canvas = document.querySelector("canvas.interactive")!;
+
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      fireEvent.pointerUp(canvas);
+
+      expect(h.elements.length).toEqual(0);
+      expect(h.state.newElement).toBeNull();
+      expect(h.state.activeTool.type).toBe("rectangle");
+      expect(h.state.activeTool.locked).toBe(true);
     });
   });
 });
