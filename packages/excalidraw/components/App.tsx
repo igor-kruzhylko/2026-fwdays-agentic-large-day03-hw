@@ -10681,9 +10681,9 @@ class App extends React.Component<AppProps, AppState> {
         return;
       }
 
-      if (isLinearElement(newElement)) {
+      if (isLinearElement(newElement) && newElement) {
         if (
-          newElement!.points.length > 1 &&
+          newElement.points.length > 1 &&
           newElement.points[1][0] !== 0 &&
           newElement.points[1][1] !== 0
         ) {

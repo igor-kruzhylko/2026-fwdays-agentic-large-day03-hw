@@ -228,7 +228,11 @@ export const actionFinalize = register<FormData>({
         }
       }
 
-      if (element && isInvisiblySmallElement(element)) {
+      const shouldDeleteElement = appState.multiElement
+        ? (isLinearElement(element) || isFreeDrawElement(element)) &&
+          element.points.length < 2
+        : isInvisiblySmallElement(element);
+      if (element && shouldDeleteElement) {
         // TODO: #7348 in theory this gets recorded by the store, so the invisible elements could be restored by the undo/redo, which might be not what we would want
         newElements = newElements.map((el) => {
           if (el.id === element?.id) {

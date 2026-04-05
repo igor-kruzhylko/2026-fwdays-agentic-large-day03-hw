@@ -483,6 +483,69 @@ describe("Test dragCreate", () => {
       expect(element.points.length).toBeGreaterThanOrEqual(2);
     });
 
+    it("multi-point line Escape between clicks with 2 committed points finalizes (regression)", async () => {
+      const { getByToolName, container } = await render(
+        <Excalidraw handleKeyboardGlobally={true} />,
+      );
+      const tool = getByToolName("line");
+      fireEvent.click(tool);
+
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      fireEvent.pointerDown(canvas, { clientX: 10, clientY: 10 });
+      fireEvent.pointerUp(canvas, { clientX: 10, clientY: 10 });
+
+      fireEvent.pointerMove(canvas, { clientX: 80, clientY: 80 });
+
+      fireEvent.pointerDown(canvas, { clientX: 80, clientY: 80 });
+      fireEvent.pointerUp(canvas, { clientX: 80, clientY: 80 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      const element = h.elements[0] as ExcalidrawLinearElement;
+      expect(element).toBeDefined();
+      expect(element.type).toBe("line");
+      expect(element.isDeleted).toBe(false);
+      expect(element.points.length).toBeGreaterThanOrEqual(2);
+      expect(h.state.activeTool.type).toBe("selection");
+    });
+
+    it("multi-point arrow Escape while pointer is down finalizes (regression)", async () => {
+      const { getByToolName, container } = await render(
+        <Excalidraw handleKeyboardGlobally={true} />,
+      );
+      const tool = getByToolName("arrow");
+      fireEvent.click(tool);
+
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerUp(canvas, { clientX: 30, clientY: 20 });
+
+      fireEvent.pointerMove(canvas, { clientX: 100, clientY: 100 });
+
+      fireEvent.pointerDown(canvas, { clientX: 100, clientY: 100 });
+      fireEvent.pointerUp(canvas, { clientX: 100, clientY: 100 });
+
+      fireEvent.pointerMove(canvas, { clientX: 200, clientY: 200 });
+
+      // pointer is down for the third point
+      fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200 });
+
+      // Escape while pointer is down — should finalize with committed points
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      fireEvent.pointerUp(canvas);
+
+      const element = h.elements[0] as ExcalidrawLinearElement;
+      expect(element).toBeDefined();
+      expect(element.type).toBe("arrow");
+      expect(element.isDeleted).toBe(false);
+      expect(element.points.length).toBeGreaterThanOrEqual(2);
+      expect(h.state.multiElement).toBeNull();
+      expect(h.state.newElement).toBeNull();
+    });
+
     it("subsequent creation works after cancellation", async () => {
       const { getByToolName, container } = await render(<Excalidraw />);
 
