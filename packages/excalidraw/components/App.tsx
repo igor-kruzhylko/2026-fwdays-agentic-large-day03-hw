@@ -9465,25 +9465,37 @@ class App extends React.Component<AppProps, AppState> {
         event.preventDefault();
         event.stopPropagation();
 
-        this.scene.mutateElement(this.state.newElement, { isDeleted: true });
+        const newElement = this.state.newElement;
+
+        this.updateScene({
+          elements: this.scene
+            .getElementsIncludingDeleted()
+            .filter((el) => el.id !== newElement.id),
+          appState: { newElement: null },
+          captureUpdate: CaptureUpdateAction.NEVER,
+        });
 
         this.removePointerDownEventListeners(pointerDownState);
 
         if (!this.state.activeTool.locked) {
           resetCursor(this.interactiveCanvas);
           this.setState((prevState) => ({
-            newElement: null,
             suggestedBinding: null,
             snapLines: updateStable(prevState.snapLines, []),
+            selectedLinearElement: null,
+            startBoundElement: null,
+            cursorButton: "up",
             activeTool: updateActiveTool(this.state, {
               type: this.state.preferredSelectionTool.type,
             }),
           }));
         } else {
           this.setState((prevState) => ({
-            newElement: null,
             suggestedBinding: null,
             snapLines: updateStable(prevState.snapLines, []),
+            selectedLinearElement: null,
+            startBoundElement: null,
+            cursorButton: "up",
           }));
         }
 

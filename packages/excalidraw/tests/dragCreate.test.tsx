@@ -537,5 +537,112 @@ describe("Test dragCreate", () => {
       expect(h.state.activeTool.type).toBe("rectangle");
       expect(h.state.activeTool.locked).toBe(true);
     });
+
+    it("line tool works after freedraw Escape cancel (regression)", async () => {
+      const { getByToolName, container } = await render(
+        <Excalidraw handleKeyboardGlobally={true} />,
+      );
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      // Start and cancel a freedraw stroke
+      fireEvent.click(getByToolName("freedraw"));
+      fireEvent.pointerDown(canvas, { clientX: 10, clientY: 10 });
+      fireEvent.pointerMove(canvas, { clientX: 40, clientY: 40 });
+      Keyboard.keyPress(KEYS.ESCAPE);
+      fireEvent.pointerUp(canvas);
+
+      expect(h.elements.length).toEqual(0);
+
+      // Switch to line tool and create a line
+      fireEvent.click(getByToolName("line"));
+      fireEvent.pointerDown(canvas, { clientX: 100, clientY: 100 });
+      fireEvent.pointerMove(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.pointerUp(canvas);
+
+      const lines = h.elements.filter(
+        (el) => el.type === "line" && !el.isDeleted,
+      );
+      expect(lines.length).toBe(1);
+    });
+
+    it("finalized multi-point line is not deleted by subsequent Escape (regression)", async () => {
+      const { getByToolName, container } = await render(
+        <Excalidraw handleKeyboardGlobally={true} />,
+      );
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      // Create a multi-point line: click-click-Escape to finalize
+      fireEvent.click(getByToolName("line"));
+
+      fireEvent.pointerDown(canvas, { clientX: 10, clientY: 10 });
+      fireEvent.pointerUp(canvas, { clientX: 10, clientY: 10 });
+
+      fireEvent.pointerDown(canvas, { clientX: 50, clientY: 50 });
+      fireEvent.pointerUp(canvas, { clientX: 50, clientY: 50 });
+
+      // Escape finalizes the multi-point line
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      const element = h.elements[0] as ExcalidrawLinearElement;
+      expect(element).toBeDefined();
+      expect(element.type).toBe("line");
+      expect(element.isDeleted).toBe(false);
+
+      // Press Escape again — should NOT delete the finalized line
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      expect(h.elements[0].isDeleted).toBe(false);
+
+      // Select another tool and draw a new element
+      fireEvent.click(getByToolName("rectangle"));
+      fireEvent.pointerDown(canvas, { clientX: 100, clientY: 100 });
+      fireEvent.pointerMove(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.pointerUp(canvas);
+
+      // The finalized multi-point line must still be present and not deleted
+      const line = h.elements.find((el) => el.type === "line");
+      expect(line).toBeDefined();
+      expect(line!.isDeleted).toBe(false);
+
+      // The new rectangle should also be present
+      const rect = h.elements.find((el) => el.type === "rectangle");
+      expect(rect).toBeDefined();
+      expect(rect!.isDeleted).toBe(false);
+    });
+
+    it("cancelled rectangle is not visible in scene elements (regression)", async () => {
+      const { getByToolName, container } = await render(<Excalidraw />);
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      fireEvent.click(getByToolName("rectangle"));
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: 80, clientY: 90 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+      fireEvent.pointerUp(canvas);
+
+      const visibleRects = h.elements.filter(
+        (el) => el.type === "rectangle" && !el.isDeleted,
+      );
+      expect(visibleRects.length).toBe(0);
+
+      const nonDeleted = h.elements.filter((el) => !el.isDeleted);
+      expect(nonDeleted.length).toBe(0);
+    });
+
+    it("cursorButton is up and selectedLinearElement is null after Escape cancel (regression)", async () => {
+      const { getByToolName, container } = await render(<Excalidraw />);
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      fireEvent.click(getByToolName("arrow"));
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: 80, clientY: 90 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+      fireEvent.pointerUp(canvas);
+
+      expect(h.state.cursorButton).toBe("up");
+      expect(h.state.selectedLinearElement).toBeNull();
+    });
   });
 });
