@@ -371,7 +371,7 @@ describe("Test dragCreate", () => {
       fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
       fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
 
-      Keyboard.keyPress(KEYS.ESCAPE);
+      Keyboard.keyPress(KEYS.ESCAPE, window);
 
       fireEvent.pointerUp(canvas);
 
@@ -390,7 +390,7 @@ describe("Test dragCreate", () => {
       fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
       fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
 
-      Keyboard.keyPress(KEYS.ESCAPE);
+      Keyboard.keyPress(KEYS.ESCAPE, window);
 
       fireEvent.pointerUp(canvas);
 
@@ -409,7 +409,7 @@ describe("Test dragCreate", () => {
       fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
       fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
 
-      Keyboard.keyPress(KEYS.ESCAPE);
+      Keyboard.keyPress(KEYS.ESCAPE, window);
 
       fireEvent.pointerUp(canvas);
 
@@ -431,7 +431,7 @@ describe("Test dragCreate", () => {
       fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
       fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
 
-      Keyboard.keyPress(KEYS.ESCAPE);
+      Keyboard.keyPress(KEYS.ESCAPE, window);
 
       fireEvent.pointerUp(canvas);
 
@@ -457,7 +457,7 @@ describe("Test dragCreate", () => {
       fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
       fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
 
-      Keyboard.keyPress(KEYS.ESCAPE);
+      Keyboard.keyPress(KEYS.ESCAPE, window);
 
       fireEvent.pointerUp(canvas);
 
@@ -476,7 +476,7 @@ describe("Test dragCreate", () => {
       fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
       fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
 
-      Keyboard.keyPress(KEYS.ESCAPE);
+      Keyboard.keyPress(KEYS.ESCAPE, window);
 
       fireEvent.pointerUp(canvas);
 
@@ -495,7 +495,7 @@ describe("Test dragCreate", () => {
       fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
       fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
 
-      Keyboard.keyPress(KEYS.ESCAPE);
+      Keyboard.keyPress(KEYS.ESCAPE, window);
 
       fireEvent.pointerUp(canvas);
 
@@ -604,7 +604,7 @@ describe("Test dragCreate", () => {
       fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200 });
 
       // Escape while pointer is down — should finalize with committed points
-      Keyboard.keyPress(KEYS.ESCAPE);
+      Keyboard.keyPress(KEYS.ESCAPE, window);
 
       fireEvent.pointerUp(canvas);
 
@@ -629,7 +629,7 @@ describe("Test dragCreate", () => {
       fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
       fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
 
-      Keyboard.keyPress(KEYS.ESCAPE);
+      Keyboard.keyPress(KEYS.ESCAPE, window);
 
       fireEvent.pointerUp(canvas);
 
@@ -662,7 +662,7 @@ describe("Test dragCreate", () => {
       fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
       fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
 
-      Keyboard.keyPress(KEYS.ESCAPE);
+      Keyboard.keyPress(KEYS.ESCAPE, window);
 
       fireEvent.pointerUp(canvas);
 
@@ -682,7 +682,7 @@ describe("Test dragCreate", () => {
       fireEvent.click(getByToolName("freedraw"));
       fireEvent.pointerDown(canvas, { clientX: 10, clientY: 10 });
       fireEvent.pointerMove(canvas, { clientX: 40, clientY: 40 });
-      Keyboard.keyPress(KEYS.ESCAPE);
+      Keyboard.keyPress(KEYS.ESCAPE, window);
       fireEvent.pointerUp(canvas);
 
       expect(h.elements.length).toEqual(0);
@@ -752,7 +752,7 @@ describe("Test dragCreate", () => {
       fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
       fireEvent.pointerMove(canvas, { clientX: 80, clientY: 90 });
 
-      Keyboard.keyPress(KEYS.ESCAPE);
+      Keyboard.keyPress(KEYS.ESCAPE, window);
       fireEvent.pointerUp(canvas);
 
       const visibleRects = h.elements.filter(
@@ -863,7 +863,7 @@ describe("Test dragCreate", () => {
       fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
       fireEvent.pointerMove(canvas, { clientX: 80, clientY: 90 });
 
-      Keyboard.keyPress(KEYS.ESCAPE);
+      Keyboard.keyPress(KEYS.ESCAPE, window);
       fireEvent.pointerUp(canvas);
 
       expect(h.state.cursorButton).toBe("up");
