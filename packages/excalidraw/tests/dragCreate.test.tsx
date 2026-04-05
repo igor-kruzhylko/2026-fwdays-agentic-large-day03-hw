@@ -5,7 +5,7 @@ import { KEYS, reseed } from "@excalidraw/common";
 
 import type { ExcalidrawLinearElement } from "@excalidraw/element/types";
 
-import { Excalidraw } from "../index";
+import { DiagramToCodePlugin, Excalidraw } from "../index";
 import * as InteractiveScene from "../renderer/interactiveScene";
 import * as StaticScene from "../renderer/staticScene";
 
@@ -402,6 +402,54 @@ describe("Test dragCreate", () => {
     it("diamond", async () => {
       const { getByToolName, container } = await render(<Excalidraw />);
       const tool = getByToolName("diamond");
+      fireEvent.click(tool);
+
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      fireEvent.pointerUp(canvas);
+
+      expect(h.elements.length).toEqual(0);
+      expect(h.state.newElement).toBeNull();
+      expect(h.state.activeTool.type).toBe("selection");
+    });
+
+    it("frame", async () => {
+      const { getByToolName, container } = await render(<Excalidraw />);
+      fireEvent.click(
+        container.querySelector(".App-toolbar__extra-tools-trigger")!,
+      );
+      const tool = getByToolName("frame");
+      fireEvent.click(tool);
+
+      const canvas = container.querySelector("canvas.interactive")!;
+
+      fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      fireEvent.pointerUp(canvas);
+
+      expect(h.elements.length).toEqual(0);
+      expect(h.state.newElement).toBeNull();
+      expect(h.state.activeTool.type).toBe("selection");
+    });
+
+    it("magicframe", async () => {
+      const { getByToolName, container } = await render(
+        <Excalidraw>
+          <DiagramToCodePlugin generate={async () => ({ html: "" })} />
+        </Excalidraw>,
+      );
+      fireEvent.click(
+        container.querySelector(".App-toolbar__extra-tools-trigger")!,
+      );
+      const tool = getByToolName("magicframe");
       fireEvent.click(tool);
 
       const canvas = container.querySelector("canvas.interactive")!;
