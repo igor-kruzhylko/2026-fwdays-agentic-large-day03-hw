@@ -9467,6 +9467,7 @@ class App extends React.Component<AppProps, AppState> {
         event.preventDefault();
         event.stopPropagation();
         this.actionManager.executeAction(actionFinalize);
+        this.missingPointerEventCleanupEmitter.clear();
         this.removePointerDownEventListeners(pointerDownState);
         return;
       }
@@ -9490,6 +9491,7 @@ class App extends React.Component<AppProps, AppState> {
           newElement.points.length > 2
         ) {
           this.actionManager.executeAction(actionFinalize);
+          this.missingPointerEventCleanupEmitter.clear();
           this.removePointerDownEventListeners(pointerDownState);
           return;
         }
@@ -9502,6 +9504,7 @@ class App extends React.Component<AppProps, AppState> {
           captureUpdate: CaptureUpdateAction.NEVER,
         });
 
+        this.missingPointerEventCleanupEmitter.clear();
         this.removePointerDownEventListeners(pointerDownState);
 
         if (!this.state.activeTool.locked) {
