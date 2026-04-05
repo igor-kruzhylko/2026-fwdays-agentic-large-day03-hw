@@ -9467,6 +9467,19 @@ class App extends React.Component<AppProps, AppState> {
 
         const newElement = this.state.newElement;
 
+        // Multi-point linear drawing uses `multiElement`; if it is missing due to
+        // a stale/batched state edge case but the element already has 3+ points
+        // (2+ segments / committed geometry), finalize instead of the single-segment
+        // cancel path which would remove the element from the scene.
+        if (
+          isLinearElement(newElement) &&
+          newElement.points.length > 2
+        ) {
+          this.actionManager.executeAction(actionFinalize);
+          this.removePointerDownEventListeners(pointerDownState);
+          return;
+        }
+
         this.updateScene({
           elements: this.scene
             .getElementsIncludingDeleted()
@@ -10644,6 +10657,12 @@ class App extends React.Component<AppProps, AppState> {
 
       this.removePointerDownEventListeners(pointerDownState);
 
+      // Re-read creation state after finalize-on-Escape (or other handlers) may have
+      // cleared `newElement` / `multiElement` so we do not run linear drag-complete
+      // logic using stale references captured at the start of this handler.
+      const newElementForPointerUp = this.state.newElement;
+      const multiElementForPointerUp = this.state.multiElement;
+
       this.props?.onPointerUp?.(activeTool, pointerDownState);
       this.onPointerUpEmitter.trigger(
         this.state.activeTool,
@@ -10651,15 +10670,15 @@ class App extends React.Component<AppProps, AppState> {
         childEvent,
       );
 
-      if (newElement?.type === "freedraw") {
+      if (newElementForPointerUp?.type === "freedraw") {
         const pointerCoords = viewportCoordsToSceneCoords(
           childEvent,
           this.state,
         );
 
-        const points = newElement.points;
-        let dx = pointerCoords.x - newElement.x;
-        let dy = pointerCoords.y - newElement.y;
+        const points = newElementForPointerUp.points;
+        let dx = pointerCoords.x - newElementForPointerUp.x;
+        let dy = pointerCoords.y - newElementForPointerUp.y;
 
         // Allows dots to avoid being flagged as infinitely small
         if (dx === points[0][0] && dy === points[0][1]) {
@@ -10667,11 +10686,11 @@ class App extends React.Component<AppProps, AppState> {
           dx += 0.0001;
         }
 
-        const pressures = newElement.simulatePressure
+        const pressures = newElementForPointerUp.simulatePressure
           ? []
-          : [...newElement.pressures, childEvent.pressure];
+          : [...newElementForPointerUp.pressures, childEvent.pressure];
 
-        this.scene.mutateElement(newElement, {
+        this.scene.mutateElement(newElementForPointerUp, {
           points: [...points, pointFrom<LocalPoint>(dx, dy)],
           pressures,
         });
@@ -10681,11 +10700,11 @@ class App extends React.Component<AppProps, AppState> {
         return;
       }
 
-      if (isLinearElement(newElement) && newElement) {
+      if (isLinearElement(newElementForPointerUp) && newElementForPointerUp) {
         if (
-          newElement.points.length > 1 &&
-          newElement.points[1][0] !== 0 &&
-          newElement.points[1][1] !== 0
+          newElementForPointerUp.points.length > 1 &&
+          newElementForPointerUp.points[1][0] !== 0 &&
+          newElementForPointerUp.points[1][1] !== 0
         ) {
           this.store.scheduleCapture();
         }
@@ -10703,8 +10722,8 @@ class App extends React.Component<AppProps, AppState> {
         if (
           (!pointerDownState.drag.hasOccurred ||
             dragDistance < MINIMUM_ARROW_SIZE) &&
-          newElement &&
-          !multiElement
+          newElementForPointerUp &&
+          !multiElementForPointerUp
         ) {
           if (this.editorInterface.isTouchScreen) {
             const FIXED_DELTA_X = Math.min(
@@ -10713,9 +10732,9 @@ class App extends React.Component<AppProps, AppState> {
             );
 
             this.scene.mutateElement(
-              newElement,
+              newElementForPointerUp,
               {
-                x: newElement.x - FIXED_DELTA_X / 2,
+                x: newElementForPointerUp.x - FIXED_DELTA_X / 2,
                 points: [
                   pointFrom<LocalPoint>(0, 0),
                   pointFrom<LocalPoint>(FIXED_DELTA_X, 0),
@@ -10726,24 +10745,30 @@ class App extends React.Component<AppProps, AppState> {
 
             this.actionManager.executeAction(actionFinalize);
           } else {
-            const dx = pointerCoords.x - newElement.x;
-            const dy = pointerCoords.y - newElement.y;
+            const dx = pointerCoords.x - newElementForPointerUp.x;
+            const dy = pointerCoords.y - newElementForPointerUp.y;
 
             this.scene.mutateElement(
-              newElement,
+              newElementForPointerUp,
               {
-                points: [newElement.points[0], pointFrom<LocalPoint>(dx, dy)],
+                points: [
+                  newElementForPointerUp.points[0],
+                  pointFrom<LocalPoint>(dx, dy),
+                ],
               },
               { informMutation: false, isDragging: false },
             );
 
             this.setState({
-              multiElement: newElement,
-              newElement,
+              multiElement: newElementForPointerUp,
+              newElement: newElementForPointerUp,
             });
           }
-        } else if (pointerDownState.drag.hasOccurred && !multiElement) {
-          if (isLinearElement(newElement)) {
+        } else if (
+          pointerDownState.drag.hasOccurred &&
+          !multiElementForPointerUp
+        ) {
+          if (isLinearElement(newElementForPointerUp)) {
             this.actionManager.executeAction(actionFinalize, "ui", {
               event: childEvent,
               sceneCoords,
@@ -10760,12 +10785,12 @@ class App extends React.Component<AppProps, AppState> {
               selectedElementIds: makeNextSelectedElementIds(
                 {
                   ...prevState.selectedElementIds,
-                  [newElement.id]: true,
+                  [newElementForPointerUp.id]: true,
                 },
                 prevState,
               ),
               selectedLinearElement: new LinearElementEditor(
-                newElement,
+                newElementForPointerUp,
                 this.scene.getNonDeletedElementsMap(),
               ),
             }));
@@ -10780,39 +10805,39 @@ class App extends React.Component<AppProps, AppState> {
         return;
       }
 
-      if (isTextElement(newElement)) {
+      if (isTextElement(newElementForPointerUp)) {
         const minWidth = getMinTextElementWidth(
           getFontString({
-            fontSize: newElement.fontSize,
-            fontFamily: newElement.fontFamily,
+            fontSize: newElementForPointerUp.fontSize,
+            fontFamily: newElementForPointerUp.fontFamily,
           }),
-          newElement.lineHeight,
+          newElementForPointerUp.lineHeight,
         );
 
-        if (newElement.width < minWidth) {
-          this.scene.mutateElement(newElement, {
+        if (newElementForPointerUp.width < minWidth) {
+          this.scene.mutateElement(newElementForPointerUp, {
             autoResize: true,
           });
         }
 
         this.resetCursor();
 
-        this.handleTextWysiwyg(newElement, {
+        this.handleTextWysiwyg(newElementForPointerUp, {
           isExistingElement: true,
         });
       }
 
       if (
         activeTool.type !== "selection" &&
-        newElement &&
-        isInvisiblySmallElement(newElement)
+        newElementForPointerUp &&
+        isInvisiblySmallElement(newElementForPointerUp)
       ) {
         // remove invisible element which was added in onPointerDown
         // update the store snapshot, so that invisible elements are not captured by the store
         this.updateScene({
           elements: this.scene
             .getElementsIncludingDeleted()
-            .filter((el) => el.id !== newElement.id),
+            .filter((el) => el.id !== newElementForPointerUp.id),
           appState: {
             newElement: null,
           },
@@ -10822,10 +10847,10 @@ class App extends React.Component<AppProps, AppState> {
         return;
       }
 
-      if (isFrameLikeElement(newElement)) {
+      if (isFrameLikeElement(newElementForPointerUp)) {
         const elementsInsideFrame = getElementsInNewFrame(
           this.scene.getElementsIncludingDeleted(),
-          newElement,
+          newElementForPointerUp,
           this.scene.getNonDeletedElementsMap(),
         );
 
@@ -10833,16 +10858,16 @@ class App extends React.Component<AppProps, AppState> {
           addElementsToFrame(
             this.scene.getElementsMapIncludingDeleted(),
             elementsInsideFrame,
-            newElement,
+            newElementForPointerUp,
             this.state,
           ),
         );
       }
 
-      if (newElement) {
+      if (newElementForPointerUp) {
         this.scene.mutateElement(
-          newElement,
-          getNormalizedDimensions(newElement),
+          newElementForPointerUp,
+          getNormalizedDimensions(newElementForPointerUp),
           {
             informMutation: false,
             isDragging: false,
@@ -11335,17 +11360,22 @@ class App extends React.Component<AppProps, AppState> {
         return;
       }
 
-      if (!activeTool.locked && activeTool.type !== "freedraw" && newElement) {
+      if (
+        !activeTool.locked &&
+        activeTool.type !== "freedraw" &&
+        newElementForPointerUp
+      ) {
         this.setState((prevState) => ({
           selectedElementIds: makeNextSelectedElementIds(
             {
               ...prevState.selectedElementIds,
-              [newElement.id]: true,
+              [newElementForPointerUp.id]: true,
             },
             prevState,
           ),
           showHyperlinkPopup:
-            isEmbeddableElement(newElement) && !newElement.link
+            isEmbeddableElement(newElementForPointerUp) &&
+            !newElementForPointerUp.link
               ? "editor"
               : prevState.showHyperlinkPopup,
         }));

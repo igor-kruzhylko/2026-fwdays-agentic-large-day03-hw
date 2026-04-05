@@ -510,6 +510,27 @@ describe("Test dragCreate", () => {
       expect(h.state.activeTool.type).toBe("selection");
     });
 
+    it("multi-point line Escape after only one committed point removes or deletes (spec)", async () => {
+      const { getByToolName, container } = await render(
+        <Excalidraw handleKeyboardGlobally={true} />,
+      );
+      const canvas = container.querySelector("canvas.interactive")!;
+      fireEvent.click(getByToolName("line"));
+
+      fireEvent.pointerDown(canvas, { clientX: 10, clientY: 10 });
+      fireEvent.pointerUp(canvas, { clientX: 10, clientY: 10 });
+      fireEvent.pointerMove(canvas, { clientX: 80, clientY: 80 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+      fireEvent.pointerUp(canvas);
+
+      const lines = h.elements.filter((el) => el.type === "line");
+      expect(
+        lines.length === 0 || lines.every((l) => l.isDeleted),
+      ).toBe(true);
+      expect(h.state.activeTool.type).toBe("selection");
+    });
+
     it("multi-point arrow Escape while pointer is down finalizes (regression)", async () => {
       const { getByToolName, container } = await render(
         <Excalidraw handleKeyboardGlobally={true} />,
