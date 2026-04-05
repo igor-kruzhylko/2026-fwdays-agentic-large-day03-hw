@@ -7,6 +7,6 @@
 
 ## 2. Regression tests (`dragCreate.test.tsx`)
 
-- [x] 2.1 Add an explicit test for **Escape after only one committed point** on a line (one click, then Escape) asserting removal or deleted state per `specs/escape-multipoint-finalize/spec.md`.
+- [x] 2.1 Add an explicit test for **Escape after only one committed point** on a line (one click, then Escape) asserting removal or deleted state per `openspec/specs/escape-multipoint-finalize/spec.md`.
 - [x] 2.2 Add or reinforce tests for **2+ committed points** + Escape (pointer up and, if feasible, pointer down) so the element stays finalized and visible.
 - [x] 2.3 Run `yarn test:update` and fix failures until green.
