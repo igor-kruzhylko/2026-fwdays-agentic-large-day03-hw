@@ -9457,6 +9457,20 @@ class App extends React.Component<AppProps, AppState> {
     pointerDownState: PointerDownState,
   ): (event: KeyboardEvent) => void {
     return withBatchedUpdates((event: KeyboardEvent) => {
+      // Multi-point line/arrow: finalize on Escape here as well so we do not rely
+      // solely on the main key handler (e.g. when keyboard events are not bound to
+      // document). Must run before the generic newElement cancel branch below.
+      if (
+        event.key === KEYS.ESCAPE &&
+        this.state.multiElement !== null
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.actionManager.executeAction(actionFinalize);
+        this.removePointerDownEventListeners(pointerDownState);
+        return;
+      }
+
       if (
         event.key === KEYS.ESCAPE &&
         this.state.newElement &&
