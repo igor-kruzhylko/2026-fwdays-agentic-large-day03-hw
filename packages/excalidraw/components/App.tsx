@@ -155,6 +155,7 @@ import {
   isElbowArrow,
   isFlowchartNodeElement,
   isBindableElement,
+  isFreeDrawElement,
   isTextElement,
   getNormalizedDimensions,
   isElementCompletelyInViewport,
@@ -9453,6 +9454,45 @@ class App extends React.Component<AppProps, AppState> {
     );
   }
 
+  /** Escape during pointer-down creation: drop in-progress element and reset tool/cursor state. */
+  private cancelPointerDownCreation(
+    pointerDownState: PointerDownState,
+    elementId: string,
+  ) {
+    this.updateScene({
+      elements: this.scene
+        .getElementsIncludingDeleted()
+        .filter((el) => el.id !== elementId),
+      appState: { newElement: null, multiElement: null },
+      captureUpdate: CaptureUpdateAction.NEVER,
+    });
+
+    this.missingPointerEventCleanupEmitter.clear();
+    this.removePointerDownEventListeners(pointerDownState);
+
+    if (!this.state.activeTool.locked) {
+      resetCursor(this.interactiveCanvas);
+      this.setState((prevState) => ({
+        suggestedBinding: null,
+        snapLines: updateStable(prevState.snapLines, []),
+        selectedLinearElement: null,
+        startBoundElement: null,
+        cursorButton: "up",
+        activeTool: updateActiveTool(this.state, {
+          type: this.state.preferredSelectionTool.type,
+        }),
+      }));
+    } else {
+      this.setState((prevState) => ({
+        suggestedBinding: null,
+        snapLines: updateStable(prevState.snapLines, []),
+        selectedLinearElement: null,
+        startBoundElement: null,
+        cursorButton: "up",
+      }));
+    }
+  }
+
   private onKeyDownFromPointerDownHandler(
     pointerDownState: PointerDownState,
   ): (event: KeyboardEvent) => void {
@@ -9466,9 +9506,43 @@ class App extends React.Component<AppProps, AppState> {
       ) {
         event.preventDefault();
         event.stopPropagation();
-        this.actionManager.executeAction(actionFinalize);
-        this.missingPointerEventCleanupEmitter.clear();
-        this.removePointerDownEventListeners(pointerDownState);
+
+        const multiElement = this.state.multiElement;
+
+        let pointsForCheck = multiElement.points;
+        if (
+          this.state.selectedLinearElement &&
+          this.state.multiElement &&
+          this.state.lastPointerDownWith !== "touch"
+        ) {
+          const { lastCommittedPoint } = this.state.selectedLinearElement;
+          const lastPoint = pointsForCheck[pointsForCheck.length - 1];
+
+          const isLastPointCommitted = lastCommittedPoint
+            ? lastPoint[0] === lastCommittedPoint[0] &&
+              lastPoint[1] === lastCommittedPoint[1]
+            : false;
+
+          if (!isLastPointCommitted) {
+            pointsForCheck = pointsForCheck.slice(0, -1);
+          }
+        }
+
+        const shouldDiscard =
+          isFreeDrawElement(multiElement)
+            ? pointsForCheck.length <= 2 || isInvisiblySmallElement(multiElement)
+            : isLinearElement(multiElement)
+              ? pointsForCheck.length < 2 ||
+                isInvisiblySmallElement(multiElement)
+              : isInvisiblySmallElement(multiElement);
+
+        if (!shouldDiscard) {
+          this.actionManager.executeAction(actionFinalize);
+          this.missingPointerEventCleanupEmitter.clear();
+          this.removePointerDownEventListeners(pointerDownState);
+        } else {
+          this.cancelPointerDownCreation(pointerDownState, multiElement.id);
+        }
         return;
       }
 
@@ -9496,38 +9570,7 @@ class App extends React.Component<AppProps, AppState> {
           return;
         }
 
-        this.updateScene({
-          elements: this.scene
-            .getElementsIncludingDeleted()
-            .filter((el) => el.id !== newElement.id),
-          appState: { newElement: null },
-          captureUpdate: CaptureUpdateAction.NEVER,
-        });
-
-        this.missingPointerEventCleanupEmitter.clear();
-        this.removePointerDownEventListeners(pointerDownState);
-
-        if (!this.state.activeTool.locked) {
-          resetCursor(this.interactiveCanvas);
-          this.setState((prevState) => ({
-            suggestedBinding: null,
-            snapLines: updateStable(prevState.snapLines, []),
-            selectedLinearElement: null,
-            startBoundElement: null,
-            cursorButton: "up",
-            activeTool: updateActiveTool(this.state, {
-              type: this.state.preferredSelectionTool.type,
-            }),
-          }));
-        } else {
-          this.setState((prevState) => ({
-            suggestedBinding: null,
-            snapLines: updateStable(prevState.snapLines, []),
-            selectedLinearElement: null,
-            startBoundElement: null,
-            cursorButton: "up",
-          }));
-        }
+        this.cancelPointerDownCreation(pointerDownState, newElement.id);
 
         return;
       }

@@ -469,6 +469,8 @@ describe("Test dragCreate", () => {
       fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
       fireEvent.pointerUp(canvas, { clientX: 30, clientY: 20 });
 
+      fireEvent.pointerMove(canvas, { clientX: 60, clientY: 70 });
+
       // click to place second point (enters multi-point mode)
       fireEvent.pointerDown(canvas, { clientX: 60, clientY: 70 });
       fireEvent.pointerUp(canvas, { clientX: 60, clientY: 70 });
