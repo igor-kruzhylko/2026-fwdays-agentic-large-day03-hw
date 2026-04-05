@@ -2,6 +2,7 @@
 The system SHALL cancel element creation when the user presses Escape during a pointer-drag creation gesture for generic shapes such as rectangle, ellipse, diamond, frame, and magicframe. The partially created element SHALL be removed from the scene's elements array via `updateScene`, ensuring the non-deleted element cache is rebuilt. No new element SHALL remain visible or selectable.
 
 #### Scenario: Cancel rectangle creation mid-drag
+- **GIVEN** the canvas is empty and the application is in the default selection mode
 - **WHEN** the user selects the rectangle tool, presses pointer down on the canvas, drags to create a rectangle, and presses Escape before releasing the pointer
 - **THEN** the rectangle element SHALL be removed from the scene's elements array, `newElement` SHALL be `null`, the tool SHALL reset to the selection tool, and `scene.getNonDeletedElements()` SHALL NOT contain the element
 
