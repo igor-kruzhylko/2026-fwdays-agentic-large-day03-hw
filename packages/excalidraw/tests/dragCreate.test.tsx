@@ -714,6 +714,97 @@ describe("Test dragCreate", () => {
       expect(nonDeleted.length).toBe(0);
     });
 
+    it("multi-point line survives Escape after large mouse move post-commit (regression)", async () => {
+      const { getByToolName, container } = await render(
+        <Excalidraw handleKeyboardGlobally={true} />,
+      );
+      const canvas = container.querySelector("canvas.interactive")!;
+      fireEvent.click(getByToolName("line"));
+
+      fireEvent.pointerDown(canvas, { clientX: 10, clientY: 10 });
+      fireEvent.pointerUp(canvas, { clientX: 10, clientY: 10 });
+
+      fireEvent.pointerMove(canvas, { clientX: 80, clientY: 80 });
+
+      fireEvent.pointerDown(canvas, { clientX: 80, clientY: 80 });
+      fireEvent.pointerUp(canvas, { clientX: 80, clientY: 80 });
+
+      // Large move after the second click — adds a hover point
+      fireEvent.pointerMove(canvas, { clientX: 120, clientY: 120 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      const element = h.elements[0] as ExcalidrawLinearElement;
+      expect(element).toBeDefined();
+      expect(element.type).toBe("line");
+      expect(element.isDeleted).toBe(false);
+      expect(element.points.length).toBeGreaterThanOrEqual(2);
+      expect(h.state.activeTool.type).toBe("selection");
+    });
+
+    it("multi-point line survives Escape after small mouse move post-commit (regression)", async () => {
+      const { getByToolName, container } = await render(
+        <Excalidraw handleKeyboardGlobally={true} />,
+      );
+      const canvas = container.querySelector("canvas.interactive")!;
+      fireEvent.click(getByToolName("line"));
+
+      fireEvent.pointerDown(canvas, { clientX: 10, clientY: 10 });
+      fireEvent.pointerUp(canvas, { clientX: 10, clientY: 10 });
+
+      fireEvent.pointerMove(canvas, { clientX: 80, clientY: 80 });
+
+      fireEvent.pointerDown(canvas, { clientX: 80, clientY: 80 });
+      fireEvent.pointerUp(canvas, { clientX: 80, clientY: 80 });
+
+      // Small move (< LINE_CONFIRM_THRESHOLD=8px) after the second click.
+      // This triggers handlePointerMove/movePoints which creates new point
+      // references, making lastCommittedPoint stale. No hover point is added.
+      fireEvent.pointerMove(canvas, { clientX: 83, clientY: 83 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      const element = h.elements[0] as ExcalidrawLinearElement;
+      expect(element).toBeDefined();
+      expect(element.type).toBe("line");
+      expect(element.isDeleted).toBe(false);
+      expect(element.points.length).toBeGreaterThanOrEqual(2);
+      expect(h.state.activeTool.type).toBe("selection");
+    });
+
+    it("multi-point line survives Escape after multiple mouse moves (regression)", async () => {
+      const { getByToolName, container } = await render(
+        <Excalidraw handleKeyboardGlobally={true} />,
+      );
+      const canvas = container.querySelector("canvas.interactive")!;
+      fireEvent.click(getByToolName("line"));
+
+      // Click first point
+      fireEvent.pointerDown(canvas, { clientX: 10, clientY: 10 });
+      fireEvent.pointerUp(canvas, { clientX: 10, clientY: 10 });
+
+      // Move to second position
+      fireEvent.pointerMove(canvas, { clientX: 80, clientY: 80 });
+
+      // Click second point
+      fireEvent.pointerDown(canvas, { clientX: 80, clientY: 80 });
+      fireEvent.pointerUp(canvas, { clientX: 80, clientY: 80 });
+
+      // Multiple moves after commit — simulates real user mouse jitter
+      // and hover point creation/tracking via handlePointerMove
+      fireEvent.pointerMove(canvas, { clientX: 100, clientY: 100 });
+      fireEvent.pointerMove(canvas, { clientX: 120, clientY: 120 });
+      fireEvent.pointerMove(canvas, { clientX: 150, clientY: 150 });
+
+      Keyboard.keyPress(KEYS.ESCAPE);
+
+      const lines = h.elements.filter(
+        (el) => el.type === "line" && !el.isDeleted,
+      ) as ExcalidrawLinearElement[];
+      expect(lines.length).toBe(1);
+      expect(lines[0].points.length).toBeGreaterThanOrEqual(2);
+    });
+
     it("cursorButton is up and selectedLinearElement is null after Escape cancel (regression)", async () => {
       const { getByToolName, container } = await render(<Excalidraw />);
       const canvas = container.querySelector("canvas.interactive")!;
